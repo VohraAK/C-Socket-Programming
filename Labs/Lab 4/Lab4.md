@@ -9,15 +9,15 @@
 It is a protocol stack consisting of the Transmission Control Protocol (TCP) and the Internet Protocol (IP), which work in tandem to provide a reliable, secure, and efficient way to transfer data over the internet.
 
 
-#### Composition
+#### Composition:
 
 The TCP/IP stack consists of **5** layers:
 
-* Application: supports network applications (ftp, smtp, http, ssh, e.t.c)
-* Transport: data transmission between end systems (**TCP**, **UDP** [User Datagram Protocol], e.t.c)
-* Network: defines protocols and implementations for the logical transmission of data through networks (**IP**, ICMP [Internet Control Message Protocol], e.t.c)
-* Data Link: data transmission between two neighbors in the network (Ethernet, e.t.c)
-* Physical: transmits raw bits and provides services to the data-link layer.
+* **Application**: supports network applications (ftp, smtp, http, ssh, e.t.c)
+* **Transport**: data transmission between end systems (**TCP**, **UDP** [User Datagram Protocol], e.t.c)
+* **Network**: defines protocols and implementations for the logical transmission of data through networks (**IP**, ICMP [Internet Control Message Protocol], e.t.c)
+* **Data Link**: data transmission between two neighbors in the network (Ethernet, e.t.c)
+* **Physical**: transmits raw bits and provides services to the data-link layer.
 
 <br>
 
@@ -82,7 +82,7 @@ The client's function call order is slightly simpler then the server's, since it
 
 For a successful connection, the server socket needs to be in the listening state (`listen()`), and the client socket needs to be in the connected state (`connect()`) with the correct IP address and port number.
 
->Note: The **UDP** protocol uses `recvfrom()` and `sendto()` to send and receive data packets, as there is no persistent connection between the client and the server as in the **TCP** protocol, and hence the endpoints must be privy to source information with each meesage / packet received.
+>**Note**: The **UDP** protocol uses `recvfrom()` and `sendto()` to send and receive data packets, as there is no persistent connection between the client and the server as in the **TCP** protocol, and hence the endpoints must be privy to source information with each meesage / packet received.
 
 
 
@@ -94,7 +94,7 @@ A TCP server supports a single client at a time, and accepts the next client in 
 
 To handle multiple clients at the same time, the TCP server can create **threads**, one for each client, reading and writing data to each client's respective thread.
 
-> Note: `read()` and `write()` overcome potential issues caused by network delays, by blocking system calls until data is available in the respective buffers, or until a timeout occurs.
+> **Note**: `read()` and `write()` overcome potential issues caused by network delays, by blocking system calls until data is available in the respective buffers, or until a timeout occurs.
 
 
 <br>
@@ -117,7 +117,7 @@ for (i = 0; i < MAX_CLIENTS; i++)
     else
         printf("Connected to client # %d", i + 1);
 
-    // read data sent by client until no further data is received
+    // read data sent by client until no further data is received (a sliding buffer is used)
     while ((str_len = read(client_socket, message, BUF_SIZE)) != 0)
         // echo data to client
         write(client_socket, message, str_len);
@@ -140,7 +140,7 @@ while (1)
     if (!str_cmp(message, "q\n") || !str_cmp(message, "Q\n"))
         break;
 
-    // send user input to server
+    // send user input to server (message of a specific size is sent)
     write(socket, message, strlen(message));
 
     // receive echoed data from server
@@ -153,8 +153,49 @@ while (1)
 }
 ```
 
-> Note: `read()` and `write()` are more general I/O functions. A more common approach is to use `recv()` and `send()` which exclusively work for sockets. The main difference between them is that the latter contain an additional argument for *flags*.
+> **Note**: `read()` and `write()` are more general I/O functions. A more common approach is to use `recv()` and `send()` which exclusively work for sockets. The main difference between them is that the latter contain an additional argument for *flags*.
 >
+
+---
+
+### TCP Working Principle:
+
+
+
+#### Associated I/O buffers:
+
+Each TCP socket is associated with seperate input and output buffers, which are automatically generated upon socket creation.
+
+When a socket is closed, the last chunk of data is left in the output buffer, while all the data in the input buffer is discarded / cleared.
+
+Such buffers can be used as *sliding windows*, as the length of the data is not predefined for either buffer. 
+
+> **Sliding Window**: The sliding window mechanism allows a sender to transmit multiple data packets before needing an acknowledgment for the first one. As the receiver acknowledges packets, the window moves forward, ensures a continuous and controlled flow of data based on network conditions and the receiver's capacity.
+
+> **Note**: These are *internal* buffers, not those created and used by the user on the application layer when reading or writing data.
+
+<br>
+
+#### Initiating a TCP connection:
+
+A TCP connection is initiated through a **three-way handshake**:
+
+1. The client requests a connection by sending an **SYN** (synchronize) message / packet to the server. This packet contains a random sequence number (e.g. SEQ = 1000).
+2. The server acknowledges the synchronization request by sending a **SYN-ACK** (synchronize-acknowledge) message / packet. The server acknowleges the client's sequence number by incrementing it, and sends its own random sequence number to the client. (e.g. ACK = 1001; SEQ = 2000)
+3. The client acknowledges the server's *SYN-ACK* by incrementing both *server's* sequence number and its own sequence number, sending a **ACK** (acknowledge) message / packet. (e.g. ACK = 2001; SEQ = 1001).
+
+> **Note**: If a *SYN-ACK* or *ACK* is not received by an endpoint, the packets will be assumed dropped and will be resent after a timeout. Multiple faliures to acknowledge a packet will result in a termination.
+
+<br>
+
+#### Closing a TCP connection:
+
+The TCP connection can be closed by either device sending a packet with the **FIN** (finish) flag set:
+
+1. A device sends a packet with the **FIN** flag set.
+2. The receiving device acknowledges (**ACK**) the **FIN** packet.
+3. The receiving device now sends a packet with the **FIN** flag set.
+4. The sending device acknowledges (**ACK**) the **FIN** packet, and both devices close the connection.
 
 ---
 
@@ -162,7 +203,7 @@ while (1)
 
 <br>
 
-#### tcp_server.c
+#### tcp_server.c:
 
 ```c
 #include <stdio.h>
@@ -258,7 +299,7 @@ int main(int argc, char *argv[])
 ```
 <br>
 
-#### tcp_client.c
+#### tcp_client.c:
 
 ```c
 #include <stdio.h>
