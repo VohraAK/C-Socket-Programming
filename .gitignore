@@ -1,3 +1,4 @@
 *.zsh
 Dockerfile*
 .DS_Store
+.vscode
