@@ -92,6 +92,8 @@ For a successful connection, the server socket needs to be in the listening stat
 
 A TCP server supports a single client at a time, and accepts the next client in the backlog after terminating the existing connection.
 
+This approach is inefficient, as the server can only service one client at a time, no matter how many clients are requesting a connection / are in the backlog.
+
 To handle multiple clients at the same time, the TCP server can create **threads**, one for each client, reading and writing data to each client's respective thread.
 
 > **Note**: `read()` and `write()` overcome potential issues caused by network delays, by blocking system calls until data is available in the respective buffers, or until a timeout occurs.
